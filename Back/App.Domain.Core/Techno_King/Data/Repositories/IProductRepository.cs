@@ -10,6 +10,9 @@ namespace App.Domain.Core.Techno_King.Data.Repositories
         #endregion
         #region Read
         #region Sorting
+        #region General Sorting
+        Task<List<ProductDTOs>> GetProductsAsync(ProductQueryParamsDTO queryParams, CancellationToken cancellationToken);
+        #endregion
         #region Price Sorting
         Task<List<ProductDTOs>> GetProductsSortedByPriceAscendingAsync(CancellationToken cancellationToken);
         Task<List<ProductDTOs>> GetProductsSortedByPriceDescendingAsync(CancellationToken cancellationToken);
@@ -31,6 +34,7 @@ namespace App.Domain.Core.Techno_King.Data.Repositories
         Task<List<ProductDTOs>> GetProductsSortedByCreatedAtDescendingAsync(CancellationToken cancellationToken);
         #endregion
         #endregion
+        #region Get
         public Task<List<ProductDTOs>> GetAllProductsAsync(CancellationToken cancellationToken);
         public Task<ProductDTOs?> GetProductByIdAsync(int id, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetProductsByCategoryIdAsync(int CategoryId, CancellationToken cancellationToken);
@@ -45,6 +49,7 @@ namespace App.Domain.Core.Techno_King.Data.Repositories
         public Task<List<ProductDTOs>> GetbyBrandAsync(string brand, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetTopNSellingProductsAsync(int n, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetTopNHighestRatedProductsAsync(int n, CancellationToken cancellationToken);
+        #endregion
 
         #endregion
         #region Update

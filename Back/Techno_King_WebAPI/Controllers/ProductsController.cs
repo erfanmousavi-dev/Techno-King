@@ -3,12 +3,14 @@ using App.Domain.Core.Techno_King.DTOs.Products;
 using App.Domain.Core.Techno_King.Enum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Techno_KingService.Techno_King.Products;
 
 namespace Techno_King_WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController(IProductAppService productAppService) : ControllerBase
+    public class ProductsController(IProductAppService productAppService,
+        IProductQueryOrchestrationAppService productQueryOrchestrationAppService) : ControllerBase
     {
         #region Create
         [HttpPost("AddProduct")]
@@ -100,6 +102,14 @@ namespace Techno_King_WebAPI.Controllers
         }
         #endregion
         #region Sorting
+
+        [HttpGet("Query")]
+        public async Task<IActionResult> GetProducts([FromQuery] ProductPageRequestDTO request,CancellationToken cancellationToken)
+        {
+            var products = await productQueryOrchestrationAppService.GetProductsAsync(request, cancellationToken);
+            return Ok(products);
+        }
+
 
         [HttpGet("Sort")]
         public async Task<IActionResult> GetProductsSortedAsync(

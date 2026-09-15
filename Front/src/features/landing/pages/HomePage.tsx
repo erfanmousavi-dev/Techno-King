@@ -1,6 +1,6 @@
 import ProductSegmentation from "../../../shared/components/ProductSegmentation";
 import ProductOnSale from "../../products/components/ProductOnSale";
-import { useGetTopSellingProducts } from "../../products/hooks/useGetTopSellingProducts";
+import { useQueryProducts } from "../../products/hooks/useQueryProducts";
 import ProductSearch from "../../search/components/ProductSearch";
 import Brands from "../components/Brands";
 import CategoryList from "../components/CategoryList";
@@ -11,7 +11,17 @@ import PromoBanner from "../components/PromoBanner";
 import Services from "../components/Services";
 
 const HomePage = () => {
-  const { data } = useGetTopSellingProducts(4);
+  const { data: newestData } = useQueryProducts({
+    sortBy: "CreatedAt",
+    ascending: false,
+    pageSize: 4,
+  });
+
+  const { data: bestSellingData } = useQueryProducts({
+    sortBy: "SalesCount",
+    ascending: false,
+    pageSize: 4,
+  });
 
   return (
     <div>
@@ -20,9 +30,9 @@ const HomePage = () => {
       {/* <ProductSearch /> */}
       <CategoryList />
       {/* <ProductOnSale /> */}
-      <ProductSegmentation data={data} title="New Products" />
+      <ProductSegmentation data={newestData} type="newest" />
       <FeaturedProducts />
-      <ProductSegmentation data={data} title="Best Sellers" />
+      <ProductSegmentation data={bestSellingData} type="bestselling" />
       <Brands />
       <PromoBanner />
       <OurBlogs />

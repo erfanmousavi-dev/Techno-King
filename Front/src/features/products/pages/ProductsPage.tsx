@@ -1,16 +1,27 @@
 import { FaSortAmountDown } from "react-icons/fa";
 import { NavLink, useSearchParams } from "react-router-dom";
-import { useGetByNameProducts } from "../hooks/useGetByNameProducts";
 import ProductCardSkeleton from "../components/ProductCardSkeleton";
+import { useProductsPageQuery } from "../hooks/useProductsPageQuery";
 import { BASE_URL } from "../../../shared/api/base";
 
+const sortOptions = [
+  { label: "Best selling", sortBy: "SalesCount", ascending: false },
+  { label: "Highest score", sortBy: "Rating", ascending: false },
+  { label: "Most expensive", sortBy: "Price", ascending: false },
+  { label: "The cheapest", sortBy: "Price", ascending: true },
+  { label: "Latest", sortBy: "CreatedAt", ascending: false },
+];
+
 const ProductsPage = () => {
+  const { products, isLoading, isError } = useProductsPageQuery();
   const [searchParams] = useSearchParams();
 
-  const query = searchParams.get("query") || "";
-
-  const searchResult = useGetByNameProducts(query);
-  const { data: products, isLoading, isError } = searchResult;
+  const buildSortLink = (sortBy: string, ascending: boolean) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("sortBy", sortBy);
+    params.set("ascending", String(ascending));
+    return `/products?${params.toString()}`;
+  };
 
   return (
     <div className="my-10 flex justify-between sm:px-8 md:px-[4rem] lg:px-[6.8rem]">
@@ -24,21 +35,22 @@ const ProductsPage = () => {
           </div>
 
           <ul className="flex gap-5">
-            <li>
-              <NavLink to="#">Best selling</NavLink>
-            </li>
-            <li>
-              <NavLink to="#">Highest score</NavLink>
-            </li>
-            <li>
-              <NavLink to="#">Most expensive</NavLink>
-            </li>
-            <li>
-              <NavLink to="#">The cheapest</NavLink>
-            </li>
-            <li>
-              <NavLink to="#">Latest</NavLink>
-            </li>
+            {sortOptions.map((opt) => {
+              const isActive =
+                searchParams.get("sortBy") === opt.sortBy &&
+                searchParams.get("ascending") === String(opt.ascending);
+
+              return (
+                <li key={opt.label}>
+                  <NavLink
+                    to={buildSortLink(opt.sortBy, opt.ascending)}
+                    className={isActive ? "font-bold text-primary" : ""}
+                  >
+                    {opt.label}
+                  </NavLink>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

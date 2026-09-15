@@ -1,13 +1,16 @@
 ﻿using App.Domain.Core.Techno_King.App.Domain.Core;
 using App.Domain.Core.Techno_King.DTOs.Products;
+using App.Domain.Core.Techno_King.Enum;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Techno_KingService.Techno_King.Products;
 
 namespace Techno_King_WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ProductsController(IProductAppService productAppService) : ControllerBase
+    public class ProductsController(IProductAppService productAppService,
+        IProductQueryOrchestrationAppService productQueryOrchestrationAppService) : ControllerBase
     {
         #region Create
         [HttpPost("AddProduct")]
@@ -24,6 +27,7 @@ namespace Techno_King_WebAPI.Controllers
             }
         }
         #endregion
+        #region ReadOnly
         [HttpGet("GetById")]
         public async Task<IActionResult> GetProduct(int id, CancellationToken cancellationToken)
         {
@@ -96,5 +100,46 @@ namespace Techno_King_WebAPI.Controllers
             var products = await productAppService.GetTopNHighestRatedProductsAsync(n, cancellationToken);
             return Ok(products);
         }
+        #endregion
+        #region Sorting
+
+        [HttpGet("Query")]
+        public async Task<IActionResult> GetProducts([FromQuery] ProductPageRequestDTO request,CancellationToken cancellationToken)
+        {
+            var products = await productQueryOrchestrationAppService.GetProductsAsync(request, cancellationToken);
+            return Ok(products);
+        }
+
+
+        [HttpGet("Sort")]
+        public async Task<IActionResult> GetProductsSortedAsync(
+            [FromQuery] ProductSortType sortBy,
+            [FromQuery] bool ascending = true,
+            CancellationToken cancellationToken = default)
+        {
+            var products = sortBy switch
+            {
+                ProductSortType.Price =>
+                    await productAppService.GetProductsSortedByPriceAsync(ascending, cancellationToken),
+
+                ProductSortType.Rating =>
+                    await productAppService.GetProductsSortedByRatingAsync(ascending, cancellationToken),
+
+                ProductSortType.SalesCount =>
+                    await productAppService.GetProductsSortedBySalesCountAsync(ascending, cancellationToken),
+
+                ProductSortType.DiscountPercentage =>
+                    await productAppService.GetProductsSortedByDiscountPercentageAsync(ascending, cancellationToken),
+
+                ProductSortType.CreatedAt =>
+                    await productAppService.GetProductsSortedByCreatedAtAsync(ascending, cancellationToken),
+
+                _ => await productAppService.GetProductsSortedByCreatedAtAsync(ascending, cancellationToken)
+            };
+
+            return Ok(products);
+        }
+
+        #endregion
     }
 }

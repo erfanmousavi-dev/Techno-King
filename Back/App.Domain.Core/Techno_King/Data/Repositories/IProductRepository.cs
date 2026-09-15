@@ -9,6 +9,32 @@ namespace App.Domain.Core.Techno_King.Data.Repositories
         public Task<bool> AddProductasync(NewProductDTOs newProductDTOs, CancellationToken cancellationToken);
         #endregion
         #region Read
+        #region Sorting
+        #region General Sorting
+        Task<List<ProductDTOs>> GetProductsAsync(ProductQueryParamsDTO queryParams, CancellationToken cancellationToken);
+        #endregion
+        #region Price Sorting
+        Task<List<ProductDTOs>> GetProductsSortedByPriceAscendingAsync(CancellationToken cancellationToken);
+        Task<List<ProductDTOs>> GetProductsSortedByPriceDescendingAsync(CancellationToken cancellationToken);
+        #endregion
+        #region Rating Sorting
+        Task<List<ProductDTOs>> GetProductsSortedByRatingAscendingAsync(CancellationToken cancellationToken);
+        Task<List<ProductDTOs>> GetProductsSortedByRatingDescendingAsync(CancellationToken cancellationToken);
+        #endregion
+        #region Sales Count Sorting
+        Task<List<ProductDTOs>> GetProductsSortedBySalesCountAscendingAsync(CancellationToken cancellationToken);
+        Task<List<ProductDTOs>> GetProductsSortedBySalesCountDescendingAsync(CancellationToken cancellationToken);
+        #endregion
+        #region Discount Percentage Sorting
+        Task<List<ProductDTOs>> GetProductsSortedByDiscountPercentageAscendingAsync(CancellationToken cancellationToken);
+        Task<List<ProductDTOs>> GetProductsSortedByDiscountPercentageDescendingAsync(CancellationToken cancellationToken);
+        #endregion
+        #region CreatedAt Sorting
+        Task<List<ProductDTOs>> GetProductsSortedByCreatedAtAscendingAsync(CancellationToken cancellationToken);
+        Task<List<ProductDTOs>> GetProductsSortedByCreatedAtDescendingAsync(CancellationToken cancellationToken);
+        #endregion
+        #endregion
+        #region Get
         public Task<List<ProductDTOs>> GetAllProductsAsync(CancellationToken cancellationToken);
         public Task<ProductDTOs?> GetProductByIdAsync(int id, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetProductsByCategoryIdAsync(int CategoryId, CancellationToken cancellationToken);
@@ -23,6 +49,7 @@ namespace App.Domain.Core.Techno_King.Data.Repositories
         public Task<List<ProductDTOs>> GetbyBrandAsync(string brand, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetTopNSellingProductsAsync(int n, CancellationToken cancellationToken);
         public Task<List<ProductDTOs>> GetTopNHighestRatedProductsAsync(int n, CancellationToken cancellationToken);
+        #endregion
 
         #endregion
         #region Update

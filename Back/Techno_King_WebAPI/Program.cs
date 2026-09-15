@@ -67,6 +67,8 @@ builder.Services.AddScoped<IUserAppService, UserAppService>();
 builder.Services.AddScoped<ICategoriesRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICategoryAppService, CategoryAppService>();
+builder.Services.AddScoped<IProductQueryOrchestrationService, ProductQueryOrchestrationService>();
+builder.Services.AddScoped<IProductQueryOrchestrationAppService, ProductQueryOrchestrationAppService>();
 
 // Add services to the container.
 builder.Services.AddControllers();

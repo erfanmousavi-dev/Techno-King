@@ -1,9 +1,11 @@
 ﻿using App.Domain.Core.Techno_King.Data.Repositories;
 using App.Domain.Core.Techno_King.DTOs.Products;
-using Connection.Common;
-using System;
-using Microsoft.EntityFrameworkCore;
 using App.Domain.Core.Techno_King.Entities.Catrgories;
+using App.Domain.Core.Techno_King.Entities.Products;
+using App.Domain.Core.Techno_King.Enum;
+using Connection.Common;
+using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace App.Infra.Data.Repos.Ef.Techno_King
 {
@@ -15,6 +17,32 @@ namespace App.Infra.Data.Repos.Ef.Techno_King
         {
             _context = appDbContext;
         }
+        #endregion
+        #region Private Helper Methods
+
+        private IQueryable<ProductDTOs> GetBaseProductQuery()
+        {
+            return _context.Products
+                .AsNoTracking()
+                .Where(x => !x.IsDeleted)
+                .Select(x => new ProductDTOs
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Price = x.Price,
+                    Description = x.Description,
+                    Brand = x.Brand,
+                    DiscountPercentage = x.DiscountPercentage,
+                    SubCategoryId = x.SubCategoryId,
+                    AverageRating = x.AverageRating,
+                    SalesCount = x.SalesCount,
+                    ImageUrl1 = x.ImageUrl1,
+                    ImageUrl2 = x.ImageUrl2,
+                    ImageUrl3 = x.ImageUrl3,
+                    IsDeleted = x.IsDeleted
+                });
+        }
+
         #endregion
         #region Create
         public async Task<bool> AddProductasync(NewProductDTOs newProductDTOs, CancellationToken cancellationToken)
@@ -35,6 +63,188 @@ namespace App.Infra.Data.Repos.Ef.Techno_King
         }
         #endregion
         #region Read
+        #region Sorting
+        #region General Sorting
+        public async Task<List<ProductDTOs>> GetProductsAsync(ProductQueryParamsDTO queryParams, CancellationToken cancellationToken)
+        {
+            IQueryable<Product> query = _context.Products
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(queryParams.Brand))
+                query = query.Where(p => p.Brand == queryParams.Brand);
+
+            if (queryParams.SubCategoryId.HasValue)
+                query = query.Where(p => p.SubCategoryId == queryParams.SubCategoryId);
+
+            if (!string.IsNullOrWhiteSpace(queryParams.Name))
+                query = query.Where(p => p.Name.Contains(queryParams.Name));
+
+            if (queryParams.MinDiscount.HasValue)
+                query = query.Where(p => p.DiscountPercentage >= queryParams.MinDiscount);
+
+            if (queryParams.MaxDiscount.HasValue)
+                query = query.Where(p => p.DiscountPercentage <= queryParams.MaxDiscount);
+
+            query = ApplySort(query, queryParams.SortBy, queryParams.Ascending);
+
+            return await query
+                .Skip((queryParams.Page - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
+                .Select(p => new ProductDTOs
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Price = p.Price,
+                    Description = p.Description,
+                    Brand = p.Brand,
+                    DiscountPercentage = p.DiscountPercentage,
+                    SubCategoryId = p.SubCategoryId,
+                    AverageRating = p.AverageRating,
+                    SalesCount = p.SalesCount,
+                    ImageUrl1 = p.ImageUrl1,
+                    ImageUrl2 = p.ImageUrl2,
+                    ImageUrl3 = p.ImageUrl3,
+                    IsDeleted = p.IsDeleted
+                })
+                .ToListAsync(cancellationToken);
+        }
+        private static IQueryable<Product> ApplySort(IQueryable<Product> query, ProductSortType? sortBy, bool ascending)
+        {
+            return sortBy switch
+            {
+                ProductSortType.Price => ascending ? query.OrderBy(p => p.Price) : query.OrderByDescending(p => p.Price),
+                ProductSortType.Rating => ascending ? query.OrderBy(p => p.AverageRating) : query.OrderByDescending(p => p.AverageRating),
+                ProductSortType.SalesCount => ascending ? query.OrderBy(p => p.SalesCount) : query.OrderByDescending(p => p.SalesCount),
+                ProductSortType.DiscountPercentage => ascending ? query.OrderBy(p => p.DiscountPercentage) : query.OrderByDescending(p => p.DiscountPercentage),
+                ProductSortType.CreatedAt => ascending ? query.OrderBy(p => p.CreatedAt) : query.OrderByDescending(p => p.CreatedAt),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+        }
+        #endregion
+        #region Price Sorting
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByPriceAscendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderBy(x => x.Price)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByPriceDescendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderByDescending(x => x.Price)
+                .ToListAsync(cancellationToken);
+        }
+
+        #endregion
+        #region Rating Sorting
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByRatingAscendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderBy(x => x.AverageRating)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByRatingDescendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderByDescending(x => x.AverageRating)
+                .ToListAsync(cancellationToken);
+        }
+
+        #endregion
+        #region Sales Count Sorting
+
+        public async Task<List<ProductDTOs>> GetProductsSortedBySalesCountAscendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderBy(x => x.SalesCount)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ProductDTOs>> GetProductsSortedBySalesCountDescendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderByDescending(x => x.SalesCount)
+                .ToListAsync(cancellationToken);
+        }
+
+        #endregion
+        #region Discount Percentage Sorting
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByDiscountPercentageAscendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderBy(x => x.DiscountPercentage)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByDiscountPercentageDescendingAsync(CancellationToken cancellationToken)
+        {
+            return await GetBaseProductQuery()
+                .OrderByDescending(x => x.DiscountPercentage)
+                .ToListAsync(cancellationToken);
+        }
+
+        #endregion
+        #region CreatedAt Sorting
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByCreatedAtAscendingAsync(CancellationToken cancellationToken)
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .Where(x => !x.IsDeleted)
+                .OrderBy(x => x.CreatedAt)
+                .Select(x => new ProductDTOs
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Price = x.Price,
+                    Description = x.Description,
+                    Brand = x.Brand,
+                    DiscountPercentage = x.DiscountPercentage,
+                    SubCategoryId = x.SubCategoryId,
+                    AverageRating = x.AverageRating,
+                    SalesCount = x.SalesCount,
+                    ImageUrl1 = x.ImageUrl1,
+                    ImageUrl2 = x.ImageUrl2,
+                    ImageUrl3 = x.ImageUrl3,
+                    IsDeleted = x.IsDeleted
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<ProductDTOs>> GetProductsSortedByCreatedAtDescendingAsync(CancellationToken cancellationToken)
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(x => new ProductDTOs
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Price = x.Price,
+                    Description = x.Description,
+                    Brand = x.Brand,
+                    DiscountPercentage = x.DiscountPercentage,
+                    SubCategoryId = x.SubCategoryId,
+                    AverageRating = x.AverageRating,
+                    SalesCount = x.SalesCount,
+                    ImageUrl1 = x.ImageUrl1,
+                    ImageUrl2 = x.ImageUrl2,
+                    ImageUrl3 = x.ImageUrl3,
+                    IsDeleted = x.IsDeleted
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        #endregion
+        #endregion
+        #region Get
         public async Task<List<ProductDTOs>> GetAllProductsAsync(CancellationToken cancellationToken)
         {
             return await _context.Products
@@ -320,7 +530,7 @@ namespace App.Infra.Data.Repos.Ef.Techno_King
                     IsDeleted = p.IsDeleted
                 }).ToListAsync(cancellationToken);
         }
-
+        #endregion
         #endregion
         #region Update
 

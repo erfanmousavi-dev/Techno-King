@@ -2,19 +2,35 @@ import arrowRight from "/icons/arrow-circle-right.svg";
 import starIcon from "/icons/star.svg";
 import type { Product } from "../../types/product.types";
 import { BASE_URL } from "../api/base";
+import { Link } from "react-router-dom";
 
-type ProductSegmentaionProps = { title: string; data: Product[] };
+type ProductSegmentaionProps = { type: "newest" | "bestselling"; data?: Product[] };
 
-const ProductSegmentation = ({ title, data }: ProductSegmentaionProps) => {
+const sortParamsByType: Record<
+  ProductSegmentaionProps["type"],
+  { sortBy: string; ascending: boolean }
+> = {
+  newest: { sortBy: "CreatedAt", ascending: false },
+  bestselling: { sortBy: "SalesCount", ascending: false },
+};
+
+const ProductSegmentation = ({ type, data = [] }: ProductSegmentaionProps) => {
+  const { sortBy, ascending } = sortParamsByType[type];
+
   return (
     <section className="my-5 px-4 sm:px-8 md:px-[4rem] lg:px-[6.8rem]">
       <div className="border-b-[2px] border-gray-200 pb-[0.7rem]">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-lg sm:text-xl md:text-[1.7rem]">{title}</h3>
-          <div className="flex items-center px-[0.5rem] py-[0.25rem]">
+          <h3 className="text-lg sm:text-xl md:text-[1.7rem]">
+            {type === "newest" ? "New Products" : "Best Sellers"}
+          </h3>
+          <Link
+            to={`/products?sortBy=${sortBy}&ascending=${ascending}`}
+            className="flex items-center px-[0.5rem] py-[0.25rem]"
+          >
             <span>View all</span>
             <img src={arrowRight} alt="arrow icon" className="invert" />
-          </div>
+          </Link>
         </div>
       </div>
 

@@ -5,11 +5,13 @@ import arrowRight from "/icons/arrow-circle-right.svg";
 import leftSliderIcon from "/icons/left-slider-arrow.svg";
 import rightSliderIcon from "/icons/right-slider-arrow.svg";
 import { Navigation } from "swiper/modules";
-import { useGetOnSaleProducts } from "../hooks/useGetOnSaleProducts";
+import { useQueryProducts } from "../hooks/useQueryProducts";
 import { BASE_URL } from "../../../shared/api/base";
 
 const ProductOnSale = () => {
-  const { data: productsOnSale = [], isLoading } = useGetOnSaleProducts();
+  const { data: productsOnSale = [], isLoading } = useQueryProducts({
+    context: "HighDiscount",
+  });
 
   if (isLoading) return <span>LOADING ... </span>;
 
@@ -61,43 +63,49 @@ const ProductOnSale = () => {
                 1280: { spaceBetween: 24, slidesOffsetAfter: 24 },
               }}
             >
-              {productsOnSale.map((item) => (
-                <SwiperSlide
-                  key={item.id}
-                  className="xs:!w-[9.5rem] !flex !h-auto !w-[8.5rem] justify-center sm:!w-[10rem] md:!w-[11.5rem]"
-                >
-                  <div className="my-2 w-full">
-                    <div className="relative flex h-full flex-col rounded-[0.25rem] bg-white p-[0.5rem] shadow-sm">
-                      <span className="absolute top-2 left-0 z-10 rounded-r-[0.625rem] bg-[#FDDBC9] px-[0.37rem] py-[0.25rem] text-xs text-[#F45E0C] sm:text-sm">
-                        -{item.discountPercentage}%
-                      </span>
+              {productsOnSale.map((item) => {
+                const originalPrice = item.price;
+                const finalPrice =
+                  item.price - (item.price * item.discountPercentage) / 100;
 
-                      <img
-                        src={`${BASE_URL}/${item.imageUrl1}`}
-                        alt={item.name}
-                        className="mt-6 mb-2 h-20 w-full object-contain sm:h-24 md:h-28"
-                      />
-
-                      <span className="mb-2 min-h-[2.5rem] text-sm font-medium md:text-base md:font-light">
-                        {item.name}
-                      </span>
-
-                      <div className="mt-auto flex justify-between text-sm font-semibold md:text-base">
-                        <span className="line-through text-gray-500 text-sm">
-                          ${item.originalPrice}
+                return (
+                  <SwiperSlide
+                    key={item.id}
+                    className="xs:!w-[9.5rem] !flex !h-auto !w-[8.5rem] justify-center sm:!w-[10rem] md:!w-[11.5rem]"
+                  >
+                    <div className="my-2 w-full">
+                      <div className="relative flex h-full flex-col rounded-[0.25rem] bg-white p-[0.5rem] shadow-sm">
+                        <span className="absolute top-2 left-0 z-10 rounded-r-[0.625rem] bg-[#FDDBC9] px-[0.37rem] py-[0.25rem] text-xs text-[#F45E0C] sm:text-sm">
+                          -{item.discountPercentage}%
                         </span>
-                        <span className="font-medium text-gray-800">
-                          ${item.finalPrice}
+
+                        <img
+                          src={`${BASE_URL}/${item.imageUrl1}`}
+                          alt={item.name}
+                          className="mt-6 mb-2 h-20 w-full object-contain sm:h-24 md:h-28"
+                        />
+
+                        <span className="mb-2 min-h-[2.5rem] text-sm font-medium md:text-base md:font-light">
+                          {item.name}
                         </span>
+
+                        <div className="mt-auto flex justify-between text-sm font-semibold md:text-base">
+                          <span className="text-sm text-gray-500 line-through">
+                            ${originalPrice}
+                          </span>
+                          <span className="font-medium text-gray-800">
+                            ${finalPrice.toFixed(0)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </SwiperSlide>
-              ))}
+                  </SwiperSlide>
+                );
+              })}
             </Swiper>
           </div>
 
-          <div className="mt-3 flex shrink-0 justify-end gap-2 md:my-2 mr-2">
+          <div className="mt-3 mr-2 flex shrink-0 justify-end gap-2 md:my-2">
             <button
               aria-label="Previous products"
               className="my-button-prev transition-opacity hover:opacity-80"

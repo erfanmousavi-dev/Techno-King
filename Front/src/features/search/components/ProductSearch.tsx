@@ -2,8 +2,8 @@ import SearchIcon from "/icons/search-2.svg";
 import closehIcon from "/icons/close-circle.svg";
 import SearchPanelSugestions from "./SearchPanelSuggestions";
 import SearchPanelResults from "./SearchPanelResults";
-import { useState } from "react";
-import { useGetByNameProducts } from "../../products/hooks/useGetByNameProducts";
+import { useEffect, useState } from "react";
+import { useQueryProducts } from "../../products/hooks/useQueryProducts";
 import { useNavigate } from "react-router-dom";
 
 interface ProductSearchProps {
@@ -15,17 +15,28 @@ const ProductSearch = ({ onClose }: ProductSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(inputValue.trim());
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [inputValue]);
+
   const {
     data: products,
     isLoading,
     isError,
-  } = useGetByNameProducts(searchQuery);
+  } = useQueryProducts(
+    { context: "Search", searchTerm: searchQuery },
+    searchQuery.length > 0,
+  );
 
   function handleSearch() {
     const trimmedValue = inputValue.trim();
     if (!trimmedValue) return;
 
-    navigate(`/search?query=${encodeURIComponent(trimmedValue)}`);
+    navigate(`/products?q=${encodeURIComponent(trimmedValue)}`);
     onClose();
   }
 

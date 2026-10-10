@@ -6,13 +6,15 @@ using App.Domain.Core.Techno_King.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Techno_KingService.Techno_King.Users;
 
 namespace Techno_KingAppService.Techno_King.Users
 {
@@ -20,36 +22,74 @@ namespace Techno_KingAppService.Techno_King.Users
     {
         #region Dependency Injection
         private readonly UserManager<UserBase> _userManager;
-        private readonly SignInManager<UserBase> _signInManager;
         private readonly IPasswordHasher<UserBase> _passwordHasher;
         private readonly ILogger<UserAppService> _logger;
         private readonly IMemoryCache _memoryCache;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IGeneralService _generalService;
         private readonly IUserService _userService;
+        private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly IConfiguration _configuration;
 
-
-        public UserAppService(UserManager<UserBase> userManager,
-            SignInManager<UserBase> signInManager,
+        public UserAppService(
+            UserManager<UserBase> userManager,
             IPasswordHasher<UserBase> passwordHasher,
             ILogger<UserAppService> logger,
             IMemoryCache memoryCache,
             IHttpContextAccessor httpContextAccessor,
             IGeneralService generalService,
-            IUserService userService)
+            IUserService userService,
+            IJwtTokenGenerator jwtTokenGenerator,
+            IConfiguration configuration)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
             _passwordHasher = passwordHasher;
             _logger = logger;
             _memoryCache = memoryCache;
             _httpContextAccessor = httpContextAccessor;
             _generalService = generalService;
             _userService = userService;
+            _jwtTokenGenerator = jwtTokenGenerator;
+            _configuration = configuration;
         }
         #endregion
+
+        #region Helper Methods
+        private async Task<AuthResponseDTO> GenerateAndSaveTokensAsync(UserBase user)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var claims = await _userManager.GetClaimsAsync(user);
+
+            var accessToken = _jwtTokenGenerator.GenerateAccessToken(user, roles, claims);
+            var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
+
+            var days = double.Parse(_configuration["JwtSettings:RefreshTokenExpirationDays"]!);
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(days);
+
+            await _userManager.UpdateAsync(user);
+
+            return new AuthResponseDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                AccessTokenExpiration = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"]!))
+            };
+        }
+
+        private string UpdateIfChanged(string currentValue, string newValue)
+        {
+            if (!string.IsNullOrWhiteSpace(newValue) && currentValue != newValue)
+            {
+                return newValue;
+            }
+            return currentValue;
+        }
+        #endregion
+
         #region Create
-        public async Task<IdentityResult> Register(UserForRegisterDTO model, CancellationToken cancellationToken)
+        public async Task<(IdentityResult Result, AuthResponseDTO? TokenData)> Register(UserForRegisterDTO model, CancellationToken cancellationToken)
         {
             var user = new UserBase
             {
@@ -67,47 +107,60 @@ namespace Techno_KingAppService.Techno_King.Users
             {
                 _logger.LogWarning("User with username {Username} failed to register at {Time}",
                     model.UserName, DateTime.UtcNow.ToLongTimeString());
-                return result;
+                return (result, null);
             }
 
             await _userManager.AddToRoleAsync(user, "Customer");
             await _userManager.AddClaimAsync(user, new Claim("CustomerId", user.Customer.Id.ToString()));
 
+            AuthResponseDTO? tokenData = null;
             if (!model.CreatedByAdmin)
             {
-                await _signInManager.PasswordSignInAsync(user.UserName, model.Password, true, false);
+                tokenData = await GenerateAndSaveTokensAsync(user);
             }
 
             _logger.LogInformation("User with username {Username} registered successfully at {Time}",
                 user.UserName, DateTime.UtcNow.ToLongTimeString());
 
-            return result;
+            return (result, tokenData);
         }
         #endregion
+
         #region Read
         #region Login
-        public async Task<IdentityResult> Login(string email, string password, bool rememberMe)
+        public async Task<AuthResponseDTO?> Login(string email, string password)
         {
             var user = await _userManager.FindByEmailAsync(email);
-            if (user is null)
+            if (user == null || !await _userManager.CheckPasswordAsync(user, password))
             {
                 _logger.LogWarning("Failed login attempt with email {Email}", email);
-                return IdentityResult.Failed(new IdentityError { Description = "Email or password is incorrect." });
+                return null;
             }
 
-            // SignInManager requires the UserName, so we take it from the user we just found
-            var result = await _signInManager.PasswordSignInAsync(user.UserName!, password, rememberMe, false);
+            _logger.LogInformation("User with email {Email} logged in successfully", email);
+            return await GenerateAndSaveTokensAsync(user);
+        }
 
-            if (!result.Succeeded)
+        public async Task<AuthResponseDTO?> RefreshTokenAsync(RefreshTokenRequestDTO model)
+        {
+            var principal = _jwtTokenGenerator.GetPrincipalFromExpiredToken(model.AccessToken);
+            if (principal is null) return null;
+
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim)) return null;
+
+            var user = await _userManager.FindByIdAsync(userIdClaim);
+
+            if (user is null || user.RefreshToken != model.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
-                _logger.LogWarning("Login failed for email {Email}", email);
-                return IdentityResult.Failed(new IdentityError { Description = "Email or password is incorrect." });
+                _logger.LogWarning("Invalid refresh token attempt for user ID {UserId}", userIdClaim);
+                return null;
             }
 
-            _logger.LogInformation("User with email {Email} logged in", email);
-            return IdentityResult.Success;
+            return await GenerateAndSaveTokensAsync(user);
         }
         #endregion
+
         public async Task<List<GetUserBaseForViewPage>> GetAllUsersAsync(CancellationToken cancellationToken)
         {
             List<GetUserBaseForViewPage> WantedUsers;
@@ -123,7 +176,7 @@ namespace Techno_KingAppService.Techno_King.Users
                     {
                         SlidingExpiration = TimeSpan.FromSeconds(10)
                     }
-                    );
+                );
             }
             return WantedUsers;
         }
@@ -148,7 +201,7 @@ namespace Techno_KingAppService.Techno_King.Users
                 userDTO = new UserDTO
                 {
                     Id = applicationUser.Id,
-                    FullName = applicationUser.FirstName + " " + applicationUser.LastName ?? applicationUser.Email ?? "کاربر بدون نام!!!!!",
+                    FullName = applicationUser.FirstName + " " + applicationUser.LastName ?? applicationUser.Email ?? "Anonymous User",
                     ProfileImageUrl = applicationUser.ImagePath ?? "~/images/Profiles/dummy-avatar.jpg"
                 };
 
@@ -165,56 +218,44 @@ namespace Techno_KingAppService.Techno_King.Users
             return await _userService.GetByIdAsync(id, cancellationToken);
         }
         #endregion
-        #region Update
-        private string UpdateIfChanged(string currentValue, string newValue)
-        {
-            if (!string.IsNullOrWhiteSpace(newValue) && currentValue != newValue)
-            {
-                return newValue;
-            }
-            return currentValue;
-        }
 
+        #region Update
         public async Task LogoutAsync()
         {
-            await _signInManager.SignOutAsync();
+            // Stateless JWT logout is handled on client side by discarding tokens.
+            await Task.CompletedTask;
         }
+
         public async Task<IdentityResult> UpdateUserInfo(UpdateUserInfoDTO userDto, int userId, CancellationToken cancellationToken)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
             {
-                _logger.LogWarning("کاربری با شناسه {UserId} یافت نشد.", userId);
-                return IdentityResult.Failed(new IdentityError { Description = "کاربر یافت نشد." });
+                _logger.LogWarning("User with ID {UserId} was not found.", userId);
+                return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+            }
+
+            user.UserName = UpdateIfChanged(user.UserName, userDto.UserName);
+            user.FirstName = UpdateIfChanged(user.FirstName, userDto.FirstName);
+            user.LastName = UpdateIfChanged(user.LastName, userDto.LastName);
+            user.Email = UpdateIfChanged(user.Email, userDto.Email);
+            user.Mobile = UpdateIfChanged(user.Mobile, userDto.Mobile);
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("User with ID {UserId} updated successfully at {Time}.", userId, DateTime.UtcNow.ToLongTimeString());
             }
             else
             {
-                user.UserName = UpdateIfChanged(user.UserName, userDto.UserName);
-                user.FirstName = UpdateIfChanged(user.FirstName, userDto.FirstName);
-                user.LastName = UpdateIfChanged(user.LastName, userDto.LastName);
-                user.Email = UpdateIfChanged(user.Email, userDto.Email);
-                user.Mobile = UpdateIfChanged(user.Mobile, userDto.Mobile);
-
-                //if (userDto.ProfileImgFile != null)
-                //{
-                //    user.ImagePath = await _generalService.UploadImage(userDto.ProfileImgFile, "Profiles", cancellationToken);
-                //}
-
-                var result = await _userManager.UpdateAsync(user);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation("کاربر با شناسه {UserId} در ساعت {Time} با موفقیت به‌روزرسانی شد.", userId, DateTime.UtcNow.ToLongTimeString());
-                }
-                else
-                {
-                    _logger.LogWarning("به‌روزرسانی کاربر با شناسه {UserId} در ساعت {Time} ناموفق بود.", userId, DateTime.UtcNow.ToLongTimeString());
-                }
-
-                return result;
+                _logger.LogWarning("Failed to update user with ID {UserId} at {Time}.", userId, DateTime.UtcNow.ToLongTimeString());
             }
+
+            return result;
         }
         #endregion
+
         #region Delete
         public async Task<IdentityResult> DeleteUser(int UserId, CancellationToken cancellationToken)
         {
@@ -222,7 +263,7 @@ namespace Techno_KingAppService.Techno_King.Users
             var user = await _userManager.FindByIdAsync(StringId);
             if (user == null)
             {
-                return IdentityResult.Failed(new IdentityError { Description = "کاربر یافت نشد." });
+                return IdentityResult.Failed(new IdentityError { Description = "User not found." });
             }
 
             user.IsDeleted = true;

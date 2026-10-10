@@ -12,32 +12,32 @@ namespace Techno_King_WebAPI.Controllers
     public class AccountController(IUserAppService userAppService) : ControllerBase
     {
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromForm]
-            UserForRegisterDTO model,
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> Register([FromBody] UserForRegisterDTO model, CancellationToken cancellationToken)
         {
             model.CreatedByAdmin = false;
 
-            var result = await userAppService.Register(model, cancellationToken);
 
-            if (!result.Succeeded)
+            var (identityResult, tokenData) = await userAppService.Register(model, cancellationToken);
+
+            if (!identityResult.Succeeded)
             {
-                foreach (var error in result.Errors)
+                foreach (var error in identityResult.Errors)
                 {
                     ModelState.AddModelError(error.Code ?? string.Empty, error.Description);
                 }
                 return ValidationProblem(ModelState);
             }
 
-            return Ok(new { message = "Registration completed successfully." });
+            return Ok(new { message = "Registration completed successfully.", data = tokenData });
         }
 
         [HttpPost("login")]
-
-        public async Task<IActionResult> Login([FromForm]UserForLoginDTO model)
+        public async Task<IActionResult> Login([FromBody] UserForLoginDTO model)
         {
-            var result = await userAppService.Login(model.Email, model.Password, model.RememberMe);
-            if (!result.Succeeded)
+
+            var tokenData = await userAppService.Login(model.Email, model.Password);
+
+            if (tokenData is null)
             {
                 return Problem(
                     title: "Login failed",
@@ -45,7 +45,7 @@ namespace Techno_King_WebAPI.Controllers
                     statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            return Ok(new { message = "Logged in successfully." });
+            return Ok(tokenData);
         }
     }
 }

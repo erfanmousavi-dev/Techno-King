@@ -43,7 +43,7 @@ namespace Techno_King_WebAPI.Controllers
         public async Task<IActionResult> SearchCategoryByName(string categoryName, CancellationToken cancellationToken)
         {
             var categories = await categoryAppService.SearchCategoryInfoByNameAsync(categoryName, cancellationToken);
-            if (categories.IsNullOrEmpty())
+            if (categories is null || !categories.Any())
             {
                 return NotFound();
             }
@@ -61,7 +61,7 @@ namespace Techno_King_WebAPI.Controllers
         public async Task<IActionResult> GetSubcategoriesByCategoryId(int categoryId, CancellationToken cancellationToken)
         {
             var subcategories = await categoryAppService.GetSubcategoriesInfoByCategoryIdAsync(categoryId, cancellationToken);
-            if (subcategories.IsNullOrEmpty())
+            if (subcategories is null || !subcategories.Any())
             {
                 return NotFound();
             }
@@ -91,7 +91,7 @@ namespace Techno_King_WebAPI.Controllers
         public async Task<IActionResult> SearchSubcategoryByName(string subcategoryName, CancellationToken cancellationToken)
         {
             var subcategories = await categoryAppService.SearchSubcategoryInfoByNameAsync(subcategoryName, cancellationToken);
-            if (subcategories.IsNullOrEmpty())
+            if (subcategories is null || !subcategories.Any())
             {
                 return NotFound();
             }

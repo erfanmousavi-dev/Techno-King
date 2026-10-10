@@ -18,6 +18,8 @@ namespace App.Domain.Core.Techno_King.Entities.Users
         public int? SuperAdminId { get; set; }
         public int? AdminId { get; set; }
         public int? CustomerId { get; set; }
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiryTime { get; set; }
         #endregion
         #region NavigationProperties
         public RoleEnum NewRole { get; set; }

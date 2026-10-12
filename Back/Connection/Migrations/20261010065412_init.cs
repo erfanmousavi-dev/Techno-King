@@ -186,6 +186,8 @@ namespace Connection.Migrations
                     SuperAdminId = table.Column<int>(type: "int", nullable: true),
                     AdminId = table.Column<int>(type: "int", nullable: true),
                     CustomerId = table.Column<int>(type: "int", nullable: true),
+                    RefreshToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RefreshTokenExpiryTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     NewRole = table.Column<int>(type: "int", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -433,12 +435,12 @@ namespace Connection.Migrations
 
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
-                columns: new[] { "Id", "AccessFailedCount", "AdminId", "Balance", "ConcurrencyStamp", "CustomerId", "Email", "EmailConfirmed", "FirstName", "ImagePath", "IsDeleted", "LastName", "LockoutEnabled", "LockoutEnd", "Mobile", "NewRole", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "RegisteredAt", "Role", "RoleId", "SecurityStamp", "SuperAdminId", "TwoFactorEnabled", "UserName" },
+                columns: new[] { "Id", "AccessFailedCount", "AdminId", "Balance", "ConcurrencyStamp", "CustomerId", "Email", "EmailConfirmed", "FirstName", "ImagePath", "IsDeleted", "LastName", "LockoutEnabled", "LockoutEnd", "Mobile", "NewRole", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "RefreshToken", "RefreshTokenExpiryTime", "RegisteredAt", "Role", "RoleId", "SecurityStamp", "SuperAdminId", "TwoFactorEnabled", "UserName" },
                 values: new object[,]
                 {
-                    { 1, 0, null, 1000000, "e975c22f-8ab0-44e3-805f-7fdd0dd974c7", null, "SuperAdmin@gmail.com", false, "armin", null, false, "tamadoni", false, null, "09377507920", 0, "SUPERADMIN@GMAIL.COM", "SUPERADMIN@GMAIL.COM", "AQAAAAIAAYagAAAAENZzgudddM6uMKVrN6RXQO9fhzSGKyginx5emR1QIKySt7TAfPHMHbsonZfYcotxbA==", null, false, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 1, 1, "ada9a37d-4e66-4f49-a14e-bf1f4bd0e6f0", 1, false, "SuperAdmin@gmail.com" },
-                    { 2, 0, 1, 1000000, "27965def-0d29-4833-90d6-1a59788a1525", null, "Admin@gmail.com", false, "Kazem", null, false, "Hassani", false, null, "09333333333", 0, "ADMIN@GMAIL.COM", "ADMIN@GMAIL.COM", "AQAAAAIAAYagAAAAEDNGogG29TzbpfXR8dEyW54z9msx39N5p7J60B8qFXsXyqn3wlEH2YyTrCo/r898MQ==", null, false, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 2, 2, "56da5aa9-24c0-4932-8688-1c49e8aad93d", null, false, "Admin@gmail.com" },
-                    { 3, 0, null, 1000000, "9f860973-8ca8-4f36-8aaf-9dc177c92bac", 1, "Customer@gmail.com", false, "Ali", null, false, "baghani", false, null, "09222222222", 0, "CUSTOMER@GMAIL.COM", "CUSTOMER@GMAIL.COM", "AQAAAAIAAYagAAAAEHKRtQ90vsbb39tRXod/l3TdKUV4dN+SoRhYrRCgQYgesUOEVcWcBotKpqNf7OIujw==", null, false, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 3, 3, "bd984d87-783f-4230-9797-4c37e661373b", null, false, "Customer@gmail.com" }
+                    { 1, 0, null, 1000000, "e975c22f-8ab0-44e3-805f-7fdd0dd974c7", null, "SuperAdmin@gmail.com", false, "armin", null, false, "tamadoni", false, null, "09377507920", 0, "SUPERADMIN@GMAIL.COM", "SUPERADMIN@GMAIL.COM", "AQAAAAIAAYagAAAAENZzgudddM6uMKVrN6RXQO9fhzSGKyginx5emR1QIKySt7TAfPHMHbsonZfYcotxbA==", null, false, null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 1, 1, "ada9a37d-4e66-4f49-a14e-bf1f4bd0e6f0", 1, false, "SuperAdmin@gmail.com" },
+                    { 2, 0, 1, 1000000, "27965def-0d29-4833-90d6-1a59788a1525", null, "Admin@gmail.com", false, "Kazem", null, false, "Hassani", false, null, "09333333333", 0, "ADMIN@GMAIL.COM", "ADMIN@GMAIL.COM", "AQAAAAIAAYagAAAAEDNGogG29TzbpfXR8dEyW54z9msx39N5p7J60B8qFXsXyqn3wlEH2YyTrCo/r898MQ==", null, false, null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 2, 2, "56da5aa9-24c0-4932-8688-1c49e8aad93d", null, false, "Admin@gmail.com" },
+                    { 3, 0, null, 1000000, "9f860973-8ca8-4f36-8aaf-9dc177c92bac", 1, "Customer@gmail.com", false, "Ali", null, false, "baghani", false, null, "09222222222", 0, "CUSTOMER@GMAIL.COM", "CUSTOMER@GMAIL.COM", "AQAAAAIAAYagAAAAEHKRtQ90vsbb39tRXod/l3TdKUV4dN+SoRhYrRCgQYgesUOEVcWcBotKpqNf7OIujw==", null, false, null, null, new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), 3, 3, "bd984d87-783f-4230-9797-4c37e661373b", null, false, "Customer@gmail.com" }
                 });
 
             migrationBuilder.InsertData(

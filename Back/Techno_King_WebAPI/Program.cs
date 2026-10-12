@@ -6,12 +6,15 @@ using App.Domain.Core.Techno_King.Enum;
 using App.Domain.Core.Techno_King.Service;
 using App.Infra.Data.Repos.Ef.Techno_King;
 using Connection.Common;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using System;
 using System.Reflection;
+using System.Text;
 using Techno_KingAppService.Techno_King.Categories;
 using Techno_KingAppService.Techno_King.Products;
 using Techno_KingAppService.Techno_King.Users;
@@ -20,16 +23,13 @@ using Techno_KingService.Techno_King.Products;
 using Techno_KingService.Techno_King.Techno_GeneralService;
 using Techno_KingService.Techno_King.Users;
 
-
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // --- Load SiteSettings from the built-in configuration ---
-// This automatically includes appsettings.json, environment variables, etc.
 var siteSettings = builder.Configuration.GetSection("SiteSettings").Get<Sitesettings>();
 builder.Services.AddSingleton(siteSettings);
 
@@ -59,6 +59,34 @@ builder.Services.AddIdentity<UserBase, IdentityRole<int>>(options =>
 .AddRoles<IdentityRole<int>>()
 .AddEntityFrameworkStores<AppDbContext>();
 
+// --- JWT Authentication Configuration ---
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(secretKey),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidateAudience = true,
+        ValidAudience = jwtSettings["Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductAppService, ProductAppService>();
@@ -71,13 +99,41 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ICategoryAppService, CategoryAppService>();
 builder.Services.AddScoped<IProductQueryOrchestrationService, ProductQueryOrchestrationService>();
 builder.Services.AddScoped<IProductQueryOrchestrationAppService, ProductQueryOrchestrationAppService>();
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// Add services to the container.
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
-// --- CORS Configuration (Global access for development) ---
+// --- Swagger Configuration with JWT Security Definition ---
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Techno_King API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// --- CORS Configuration ---
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -92,7 +148,6 @@ var app = builder.Build();
 
 app.UseCors();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -103,8 +158,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-//app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
+app.UseAuthentication(); // Registered before UseAuthorization
 app.UseAuthorization();
 
 app.UseStaticFiles();

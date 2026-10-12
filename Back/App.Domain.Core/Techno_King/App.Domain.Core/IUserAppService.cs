@@ -10,21 +10,20 @@ namespace App.Domain.Core.Techno_King.App.Domain.Core
 {
     public interface IUserAppService
     {
-        #region Create
-        public Task<IdentityResult> Register(UserForRegisterDTO model, CancellationToken cancellationToken);
-        #endregion
-        #region Read
-        public Task<IdentityResult> Login(string email, string password, bool rememberMe);
+        // امضای جدید با Tuple برای خروجی توکن و نتیجه
+        Task<(IdentityResult Result, AuthResponseDTO? TokenData)> Register(UserForRegisterDTO model, CancellationToken cancellationToken);
+
+        // امضای جدید برای لاگین
+        Task<AuthResponseDTO?> Login(string email, string password);
+
+        // امضای جدید برای رفرش توکن
+        Task<AuthResponseDTO?> RefreshTokenAsync(RefreshTokenRequestDTO model);
+
         Task<List<GetUserBaseForViewPage>> GetAllUsersAsync(CancellationToken cancellationToken);
-        public Task<UserDTO?> GetCurrentUserAsync();
-        public Task<UserBaseDTO> GetByIdAsync(int id, CancellationToken cancellationToken);
-        #endregion
-        #region Update
-        public Task<IdentityResult> UpdateUserInfo(UpdateUserInfoDTO userDto, int userId, CancellationToken cancellationToken);
-        public Task LogoutAsync();
-        #endregion
-        #region Delete
-        public Task<IdentityResult> DeleteUser(int UserId, CancellationToken cancellationToken);
-        #endregion
+        Task<UserDTO?> GetCurrentUserAsync();
+        Task<UserBaseDTO> GetByIdAsync(int id, CancellationToken cancellationToken);
+        Task LogoutAsync();
+        Task<IdentityResult> UpdateUserInfo(UpdateUserInfoDTO userDto, int userId, CancellationToken cancellationToken);
+        Task<IdentityResult> DeleteUser(int UserId, CancellationToken cancellationToken);
     }
 }

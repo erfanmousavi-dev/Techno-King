@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 
 interface LoginInputsProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => void | Promise<void>;
 }
 
 const LoginInputs = ({ onSubmit }: LoginInputsProps) => {

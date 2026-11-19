@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 
 interface RegisterInputsProps {
-  onSubmit: (data: any) => void;
+   onSubmit: (data: any) => void | Promise<void>;
 }
 
 const RegisterInputs = ({ onSubmit }: RegisterInputsProps) => {

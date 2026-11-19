@@ -5,6 +5,7 @@ import { useState } from "react";
 import ProductSearch from "../../features/search/components/ProductSearch";
 import LoginRegisterForm from "../../features/auth/components/LoginRegisterForm";
 import { tokenStorage } from "../../features/auth/api/tokenStorage";
+import toast from "react-hot-toast";
 
 function AppLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -27,9 +28,14 @@ function AppLayout() {
 
   const toggleUserMenu = () => setIsUserMenuOpen((prev) => !prev);
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = (type: "login" | "register") => {
     setIsLoggedIn(true);
     setIsAuthOpen(false);
+    toast.success(
+      type === "register"
+        ? "Your registration was successful."
+        : "You have successfully logged in.",
+    );
   };
 
   const handleLogout = () => {

@@ -7,10 +7,11 @@ import RegisterInputs from "./RegisterInputs";
 import { registerUser } from "../api/registere";
 import { loginUser } from "../api/login";
 import { tokenStorage } from "../api/tokenStorage";
+import toast from "react-hot-toast";
 
 interface LoginRegisterFormProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (type: "login" | "register") => void;
 }
 
 const LoginRegisterForm = ({ onClose, onSuccess }: LoginRegisterFormProps) => {
@@ -32,10 +33,11 @@ const LoginRegisterForm = ({ onClose, onSuccess }: LoginRegisterFormProps) => {
         rememberMe: data.keepLoggedIn,
       });
       tokenStorage.save(result);
-      onSuccess();
+      onSuccess("login");
       console.log("Success:", result);
     } catch (error) {
       console.error("Login error:", error);
+       toast.error("Invalid email or password.")
     }
   };
 
@@ -47,10 +49,11 @@ const LoginRegisterForm = ({ onClose, onSuccess }: LoginRegisterFormProps) => {
         password: data.password,
       });
       tokenStorage.save(result.data);
-      onSuccess();
+      onSuccess("register");
       console.log("Success:", result);
     } catch (error) {
       console.error("Register error:", error);
+      toast.error("Registration failed. Please try again.");
     }
   };
 
